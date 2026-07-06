@@ -1,0 +1,463 @@
+<!-- The Organizing Warehouse — AI Chat Widget -->
+<!-- Paste this whole file into a new Liquid snippet called tow-chat-widget.liquid -->
+
+<div id="tow-chat-root">
+  <button id="tow-chat-toggle" aria-label="Ask us anything" aria-expanded="false">
+    <svg id="tow-chat-icon-open" width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5c-1.35 0-2.62-.32-3.75-.9L3 21l1.9-5.55A8.46 8.46 0 0 1 3.5 11.5 8.5 8.5 0 0 1 12 3a8.5 8.5 0 0 1 9 8.5Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <svg id="tow-chat-icon-close" width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:none;">
+      <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </button>
+
+  <div id="tow-chat-panel" role="dialog" aria-label="Ask us anything" aria-hidden="true">
+    <div id="tow-chat-header">
+      <span id="tow-chat-header-title">Ask us anything</span>
+      <button id="tow-chat-close" aria-label="Close chat">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+    </div>
+
+    <div id="tow-chat-messages"></div>
+
+    <form id="tow-chat-form">
+      <textarea
+        id="tow-chat-input"
+        rows="1"
+        placeholder="Type your message..."
+        aria-label="Type your message"
+      ></textarea>
+      <button type="submit" id="tow-chat-send" aria-label="Send message">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+    </form>
+  </div>
+</div>
+
+<style>
+  #tow-chat-root {
+    --tow-chat-primary: #2a6b6b;
+    --tow-chat-primary-dark: #1f5252;
+    --tow-chat-bg: #ffffff;
+    --tow-chat-text: #1f2b2b;
+    --tow-chat-muted: #6b7a7a;
+    --tow-chat-bubble-user-bg: #2a6b6b;
+    --tow-chat-bubble-user-text: #ffffff;
+    --tow-chat-bubble-bot-bg: #f1f4f4;
+    --tow-chat-bubble-bot-text: #1f2b2b;
+    --tow-chat-border: #e2e8e8;
+    --tow-chat-radius: 16px;
+    --tow-chat-z: 2147483000;
+
+    all: initial;
+    * {
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+  }
+
+  #tow-chat-toggle {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    background: var(--tow-chat-primary);
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.22);
+    z-index: var(--tow-chat-z);
+    transition: transform 0.15s ease, background 0.15s ease;
+  }
+  #tow-chat-toggle:hover {
+    background: var(--tow-chat-primary-dark);
+    transform: scale(1.05);
+  }
+
+  #tow-chat-panel {
+    position: fixed;
+    bottom: 90px;
+    right: 20px;
+    width: 380px;
+    max-width: calc(100vw - 24px);
+    height: 560px;
+    max-height: calc(100vh - 120px);
+    background: var(--tow-chat-bg);
+    border-radius: var(--tow-chat-radius);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    z-index: var(--tow-chat-z);
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+    pointer-events: none;
+    transition: opacity 0.18s ease, transform 0.18s ease;
+  }
+  #tow-chat-panel.tow-chat-open {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+  }
+
+  #tow-chat-header {
+    background: var(--tow-chat-primary);
+    color: #fff;
+    padding: 16px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+  #tow-chat-header-title {
+    font-size: 16px;
+    font-weight: 600;
+  }
+  #tow-chat-close {
+    background: transparent;
+    border: none;
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+    opacity: 0.9;
+  }
+  #tow-chat-close:hover {
+    opacity: 1;
+  }
+
+  #tow-chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: var(--tow-chat-bg);
+  }
+
+  .tow-chat-msg {
+    max-width: 84%;
+    padding: 10px 13px;
+    border-radius: 14px;
+    font-size: 14px;
+    line-height: 1.45;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+  .tow-chat-msg-user {
+    align-self: flex-end;
+    background: var(--tow-chat-bubble-user-bg);
+    color: var(--tow-chat-bubble-user-text);
+    border-bottom-right-radius: 4px;
+  }
+  .tow-chat-msg-bot {
+    align-self: flex-start;
+    background: var(--tow-chat-bubble-bot-bg);
+    color: var(--tow-chat-bubble-bot-text);
+    border-bottom-left-radius: 4px;
+  }
+  .tow-chat-msg-error {
+    align-self: flex-start;
+    background: #fdeceb;
+    color: #9a3324;
+    border: 1px solid #f3c9c4;
+  }
+
+  .tow-chat-typing {
+    align-self: flex-start;
+    display: flex;
+    gap: 4px;
+    padding: 12px 14px;
+    background: var(--tow-chat-bubble-bot-bg);
+    border-radius: 14px;
+    border-bottom-left-radius: 4px;
+  }
+  .tow-chat-typing span {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--tow-chat-muted);
+    display: inline-block;
+    animation: tow-chat-bounce 1.2s infinite ease-in-out;
+  }
+  .tow-chat-typing span:nth-child(2) { animation-delay: 0.15s; }
+  .tow-chat-typing span:nth-child(3) { animation-delay: 0.3s; }
+
+  @keyframes tow-chat-bounce {
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.6; }
+    30% { transform: translateY(-4px); opacity: 1; }
+  }
+
+  #tow-chat-form {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    padding: 12px;
+    border-top: 1px solid var(--tow-chat-border);
+    background: var(--tow-chat-bg);
+    flex-shrink: 0;
+  }
+  #tow-chat-input {
+    flex: 1;
+    resize: none;
+    border: 1px solid var(--tow-chat-border);
+    border-radius: 20px;
+    padding: 10px 14px;
+    font-size: 14px;
+    line-height: 1.4;
+    max-height: 100px;
+    color: var(--tow-chat-text);
+    outline: none;
+  }
+  #tow-chat-input:focus {
+    border-color: var(--tow-chat-primary);
+  }
+  #tow-chat-send {
+    background: var(--tow-chat-primary);
+    color: #fff;
+    border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.15s ease;
+  }
+  #tow-chat-send:hover {
+    background: var(--tow-chat-primary-dark);
+  }
+  #tow-chat-send:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  @media (max-width: 480px) {
+    #tow-chat-panel {
+      right: 12px;
+      left: 12px;
+      width: auto;
+      bottom: 84px;
+      height: calc(100vh - 110px);
+      max-height: none;
+    }
+    #tow-chat-toggle {
+      right: 16px;
+      bottom: 16px;
+    }
+  }
+</style>
+
+<script>
+(function () {
+  // Change this to your deployed backend URL (e.g. Railway app URL).
+  var TOW_CHAT_BACKEND_URL = 'https://your-app-name.up.railway.app';
+
+  var conversationHistory = [];
+
+  var root = document.getElementById('tow-chat-root');
+  var toggleBtn = document.getElementById('tow-chat-toggle');
+  var closeBtn = document.getElementById('tow-chat-close');
+  var panel = document.getElementById('tow-chat-panel');
+  var messagesEl = document.getElementById('tow-chat-messages');
+  var form = document.getElementById('tow-chat-form');
+  var input = document.getElementById('tow-chat-input');
+  var sendBtn = document.getElementById('tow-chat-send');
+  var iconOpen = document.getElementById('tow-chat-icon-open');
+  var iconClose = document.getElementById('tow-chat-icon-close');
+
+  var isOpen = false;
+  var isSending = false;
+
+  function openPanel() {
+    isOpen = true;
+    panel.classList.add('tow-chat-open');
+    panel.setAttribute('aria-hidden', 'false');
+    toggleBtn.setAttribute('aria-expanded', 'true');
+    iconOpen.style.display = 'none';
+    iconClose.style.display = 'block';
+    if (messagesEl.children.length === 0) {
+      appendMessage('bot', "Hiya! I'm here to help with product questions, sizing, your basket, or anything else about The Organizing Warehouse. What can I help you find?");
+    }
+    setTimeout(function () { input.focus(); }, 150);
+  }
+
+  function closePanel() {
+    isOpen = false;
+    panel.classList.remove('tow-chat-open');
+    panel.setAttribute('aria-hidden', 'true');
+    toggleBtn.setAttribute('aria-expanded', 'false');
+    iconOpen.style.display = 'block';
+    iconClose.style.display = 'none';
+  }
+
+  toggleBtn.addEventListener('click', function () {
+    isOpen ? closePanel() : openPanel();
+  });
+  closeBtn.addEventListener('click', closePanel);
+
+  function scrollToBottom() {
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+
+  function appendMessage(role, text) {
+    var bubble = document.createElement('div');
+    bubble.className = 'tow-chat-msg ' + (role === 'user' ? 'tow-chat-msg-user' : role === 'error' ? 'tow-chat-msg-error' : 'tow-chat-msg-bot');
+    bubble.textContent = text;
+    messagesEl.appendChild(bubble);
+    scrollToBottom();
+    return bubble;
+  }
+
+  function showTypingIndicator() {
+    var wrap = document.createElement('div');
+    wrap.className = 'tow-chat-typing';
+    wrap.id = 'tow-chat-typing-indicator';
+    wrap.innerHTML = '<span></span><span></span><span></span>';
+    messagesEl.appendChild(wrap);
+    scrollToBottom();
+    return wrap;
+  }
+
+  function removeTypingIndicator() {
+    var el = document.getElementById('tow-chat-typing-indicator');
+    if (el) el.remove();
+  }
+
+  function autoResizeInput() {
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, 100) + 'px';
+  }
+  input.addEventListener('input', autoResizeInput);
+
+  input.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      form.requestSubmit();
+    }
+  });
+
+  async function sendMessage(message) {
+    isSending = true;
+    sendBtn.disabled = true;
+
+    var typingIndicator = showTypingIndicator();
+    var botBubble = null;
+    var botText = '';
+    var firstTokenReceived = false;
+
+    try {
+      var response = await fetch(TOW_CHAT_BACKEND_URL + '/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: message,
+          conversationHistory: conversationHistory,
+        }),
+      });
+
+      if (!response.ok || !response.body) {
+        throw new Error('Request failed with status ' + response.status);
+      }
+
+      var reader = response.body.getReader();
+      var decoder = new TextDecoder();
+      var buffer = '';
+
+      while (true) {
+        var chunk = await reader.read();
+        if (chunk.done) break;
+
+        buffer += decoder.decode(chunk.value, { stream: true });
+        var events = buffer.split('\n\n');
+        buffer = events.pop(); // keep the last (possibly incomplete) event in the buffer
+
+        for (var i = 0; i < events.length; i++) {
+          var rawEvent = events[i];
+          if (!rawEvent.trim()) continue;
+
+          var eventType = 'message';
+          var dataLines = [];
+
+          var lines = rawEvent.split('\n');
+          for (var j = 0; j < lines.length; j++) {
+            var line = lines[j];
+            if (line.indexOf('event:') === 0) {
+              eventType = line.slice(6).trim();
+            } else if (line.indexOf('data:') === 0) {
+              dataLines.push(line.slice(5).trim());
+            }
+          }
+
+          if (dataLines.length === 0) continue;
+
+          var data;
+          try {
+            data = JSON.parse(dataLines.join('\n'));
+          } catch (parseErr) {
+            continue;
+          }
+
+          if (eventType === 'token') {
+            if (!firstTokenReceived) {
+              firstTokenReceived = true;
+              removeTypingIndicator();
+              botBubble = appendMessage('bot', '');
+            }
+            botText += data.text;
+            botBubble.textContent = botText;
+            scrollToBottom();
+          } else if (eventType === 'error') {
+            removeTypingIndicator();
+            appendMessage('error', data.message || "Sorry, something went wrong. Please try again.");
+          } else if (eventType === 'done') {
+            // stream finished normally
+          }
+        }
+      }
+
+      removeTypingIndicator();
+
+      if (botText) {
+        conversationHistory.push({ role: 'user', content: message });
+        conversationHistory.push({ role: 'assistant', content: botText });
+      }
+    } catch (err) {
+      removeTypingIndicator();
+      appendMessage('error', "Sorry, I'm having trouble connecting right now. Please try again in a moment.");
+    } finally {
+      isSending = false;
+      sendBtn.disabled = false;
+    }
+  }
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (isSending) return;
+
+    var message = input.value.trim();
+    if (!message) return;
+
+    appendMessage('user', message);
+    input.value = '';
+    autoResizeInput();
+
+    sendMessage(message);
+  });
+})();
+</script>
